@@ -37,18 +37,26 @@ def readKu(url_front, url_tail, count) :
     html_doc = resp.read()
     soup = BeautifulSoup(html_doc, 'html5lib')
 
+    title = soup.head.title.string + '/'
+    folderName = "E:/hoopPics/" + title
+
+    try:
+        os.mkdir(folderName)
+    except:
+        pass
+
     # 下一张按钮, 如果此按钮不存在则再递归多一次再退出递归
     a_nextPage = soup.find('a', text='下一张')
     if a_nextPage is not None :
         a_nextPage = a_nextPage.get('href')
-        readKuOperator(soup, url_front, url_tail, count)
+        readKuOperator(soup, url_front, url_tail, count, folderName)
     else :
-        readKuOperator(soup, url_front, url_tail, count)
+        readKuOperator(soup, url_front, url_tail, count, folderName)
         return
 
     return readKu(url_front, a_nextPage, count+1)
 
-def readKuOperator(soup, url_front, url_tail, count) :
+def readKuOperator(soup, url_front, url_tail, count, folderName) :
     # 查看原图的div
     div_sourcePic = soup.find_all('div', class_='tag')
 
@@ -58,7 +66,7 @@ def readKuOperator(soup, url_front, url_tail, count) :
         if (div.text.startswith('查看原图：')):
             url_sourcePic = 'http:' + div.text.replace('查看原图：', '').strip()
 
-    path = "E:/hoopPics/" + str(count) + '.jpg'
+    path = folderName + str(count) + '.jpg'
     # f = request.urlretrieve('http:' + url_sourcePic, path)
     img = request.urlopen(url_sourcePic)
     img = img.read()
