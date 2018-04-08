@@ -35,7 +35,7 @@ class TAOBAO:
                 nick = eval(nik[i].split(':',1)[1])
                 self.ilt.append([price , num, title, nick])
         except:
-            traceback.print_exc()
+            # traceback.print_exc()
             # print("摘取数据出错").encode('utf-8')
             return None
     #打印数据
@@ -80,13 +80,19 @@ class TAOBAO:
                 self.parsePage(html)
             except:
                 continue
-        self.printGoodsList()
+        # self.printGoodsList()
         # self.writeData()
         self.printPosition()
 
-goods=input("输入想要查询的物品:")#.decode(sys.stdin.encoding or locale.getpreferredencoding(True))
-baseurl = "https://s.taobao.com/search?q="
-page=int(input("输入想要查询的页数:"))
-username="空空空空白24"
-tb = TAOBAO(baseurl,page,goods,username)
-tb.start()
+def do() :
+    goods=input("输入想要查询的物品:")#.decode(sys.stdin.encoding or locale.getpreferredencoding(True))
+    baseurl = "https://s.taobao.com/search?q="
+    # page=int(input("输入想要查询的页数:"))
+    page=10
+    username="空空空空白24"
+    tb = TAOBAO(baseurl,page,goods,username)
+    tb.start()
+    do()
+
+if __name__ == '__main__':
+    do()
