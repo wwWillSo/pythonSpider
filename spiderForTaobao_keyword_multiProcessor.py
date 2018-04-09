@@ -1,13 +1,33 @@
 # -*- coding: utf-8 -*
+import multiprocessing
+
 import requests
 import re
 import sys,locale, traceback
+import easyquotation
+from flask import Flask, request as flaskReq, session, g, redirect, url_for, abort, \
+     render_template, flash, jsonify
+from urllib import request,parse
+import re, os, traceback, time
+import json
+import configparser
+from datetime import  datetime, timedelta
+from multiprocessing import Pool, Process
 
+# 读取配置
+config=configparser.ConfigParser()
+config.read('config.ini')
+
+app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False
+
+baseUrl = "https://s.taobao.com/search?q="
+page=int(config.get("taobao", 'page'))
 
 #淘宝爬虫类
 class TAOBAO:
     #初始化，传入基地址，页数
-    def __init__(self,baseUrl,page,goods,username):
+    def __init__(self,baseUrl,page,goods,username,):
         self.goods=goods
         self.username = username
         self.baseUrl=baseUrl+self.goods
@@ -40,7 +60,6 @@ class TAOBAO:
             return None
     #打印数据
     def printGoodsList(self):
-
         tplt = "{:^4}\t{:<14}\t{:<10}\t{:^80}\t{:^50}"
         print (tplt.format("序号", "价格","成交量", "商品名称", "商家用户名", ))#.decode('utf-8'))
         count = 0
@@ -62,6 +81,7 @@ class TAOBAO:
             self.file.write(tplt.format(count, g[0], g[1], g[2], g[3],chr(100))+"\n")
 
     def printPosition(self):
+        # print('第' + str(self.page) + '页，记录数：' + str(len(self.ilt)))
         results = []
         count = 0
         pos = 0
@@ -70,7 +90,9 @@ class TAOBAO:
             if str(g[3]).endswith(self.username) :
                 pos = pos + 1
                 results.insert(pos, str(count) + ':' + g[2])
-        print(self.username + '的店铺在此搜索结果中的位置为：' + str(results))
+                print(self.username + '的店铺在此搜索结果中的位置为：第' + str(self.page * len(self.ilt) + count) + '位，题目：' + g[2] + '，线程号：' + str(self.page))
+        # print(self.username + '的店铺在此搜索结果中的位置为：第' + str(self.page + 1) + '页，' + str(results))
+        return results
 
     def start(self):
         for i in range(self.page):
@@ -80,19 +102,51 @@ class TAOBAO:
                 self.parsePage(html)
             except:
                 continue
-        # self.printGoodsList()
-        # self.writeData()
-        self.printPosition()
+        return self.printPosition()
 
-def do() :
-    goods=input("输入想要查询的物品:")#.decode(sys.stdin.encoding or locale.getpreferredencoding(True))
-    baseurl = "https://s.taobao.com/search?q="
-    # page=int(input("输入想要查询的页数:"))
-    page=30
-    username="空空空空白24"
-    tb = TAOBAO(baseurl,page,goods,username)
-    tb.start()
+    def start_new(self, page):
+        try:
+            url = self.baseUrl + '&s=' + str(44 * page)
+            # print(url)
+            html = self.getHTMLText(url)
+            self.parsePage(html)
+            # print('第' + str(self.page) + '页，记录数：' + str(len(self.ilt)) + '-' + str(page_size_map[page]))
+        except:
+            traceback.print_exc()
+        return self.printPosition()
+
+@app.route('/getPosition')
+def getPosition():
+    username = flaskReq.args.get('u')
+    goods = flaskReq.args.get('kw')
+    tb = TAOBAO(baseUrl, page, goods, username)
+    results = tb.start()
+    return username + '的店铺在此搜索结果中的位置为：' + str(results)
+
+def startPool(username, goods) :
+    try :
+        begin = datetime.now()
+        pool = Pool(4)
+        for i in range(page):
+            result = pool.apply_async(processor, (username, goods, i))
+        pool.close()
+        pool.join()
+        end = datetime.now()
+        print('All subprocesses done in %d seconds.' % (end.timestamp()-begin.timestamp()))
+    except :
+        traceback.print_exc()
+
+def processor(username, goods, page) :
+    tb = TAOBAO(baseUrl, page, goods, username)
+    results = tb.start_new(page)
+
+def do ():
+    goods = input("输入想要查询的标题:")
+    startPool('空空空空白24', goods)
     do()
 
 if __name__ == '__main__':
+    # for i in range(page) :
+    #     page_size_map[i] = 0
     do()
+    # app.run(debug=True, host=config.get("taobao", 'host'), port=int(config.get("taobao", 'port')))

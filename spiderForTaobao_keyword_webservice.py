@@ -2,7 +2,32 @@
 import requests
 import re
 import sys,locale, traceback
+import easyquotation
+from flask import Flask, request as flaskReq, session, g, redirect, url_for, abort, \
+     render_template, flash, jsonify
+from urllib import request,parse
+import re, os, traceback, time
+import json
+import configparser
+from datetime import  datetime, timedelta
 
+# 读取配置
+config=configparser.ConfigParser()
+config.read('config.ini')
+
+app = Flask(__name__)
+app.config['JSON_AS_ASCII'] = False
+
+baseUrl = "https://s.taobao.com/search?q="
+page=10
+
+@app.route('/getPosition')
+def getPosition():
+    username = flaskReq.args.get('u')
+    goods = flaskReq.args.get('kw')
+    tb = TAOBAO(baseUrl, page, goods, username)
+    results = tb.start()
+    return username + '的店铺在此搜索结果中的位置为：' + str(results)
 
 #淘宝爬虫类
 class TAOBAO:
@@ -71,6 +96,7 @@ class TAOBAO:
                 pos = pos + 1
                 results.insert(pos, str(count) + ':' + g[2])
         print(self.username + '的店铺在此搜索结果中的位置为：' + str(results))
+        return results
 
     def start(self):
         for i in range(self.page):
@@ -82,17 +108,18 @@ class TAOBAO:
                 continue
         # self.printGoodsList()
         # self.writeData()
-        self.printPosition()
+        return self.printPosition()
 
 def do() :
     goods=input("输入想要查询的物品:")#.decode(sys.stdin.encoding or locale.getpreferredencoding(True))
     baseurl = "https://s.taobao.com/search?q="
     # page=int(input("输入想要查询的页数:"))
-    page=30
+    page=10
     username="空空空空白24"
     tb = TAOBAO(baseurl,page,goods,username)
     tb.start()
     do()
 
 if __name__ == '__main__':
-    do()
+    # do()
+    app.run(debug=True, host=config.get("taobao", 'host'), port=int(config.get("taobao", 'port')))
